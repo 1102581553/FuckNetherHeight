@@ -131,16 +131,11 @@ LL_TYPE_INSTANCE_HOOK(
         name = (decltype(name))VanillaDimensions::TheEnd();                                                            \
         __VA_ARGS__                                                                                                    \
     }
-
-// 新增宏：针对Overworld的高度修改（无ID伪装，因为Overworld已经是高限）
-#define OVERWORLD_HEIGHT_MODIFY(heightRange)                                                                           \
-    if (dimId == VanillaDimensions::Overworld()) {                                                                     \
-        heightRange.mMax = 512;  // 修改为512，可根据需要调整                                                                 \
-    }
-
 using namespace ll::literals;
+
+// 修改后的维度高度钩子 - 同时修改主世界和下界的高度
 LL_TYPE_INSTANCE_HOOK(
-    ModifyNetherHeightHook,
+    ModifyDimensionHeightHook,
     HookPriority::Normal,
     Dimension,
     "??0Dimension@@QEAA@AEAVILevel@@V?$AutomaticID@VDimension@@H@@VDimensionHeightRange@@AEAVScheduler@@V?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z"_sym,
@@ -151,10 +146,15 @@ LL_TYPE_INSTANCE_HOOK(
     Scheduler&           callbackContext,
     std::string          name
 ) {
-    if (dimId == VanillaDimensions::Nether()) {
-        heightRange.mMax = 256;  // 保留原Nether修改
+    // 修改主世界高度范围: -128 到 512 (原版默认 -64~320)
+    if (dimId == VanillaDimensions::Overworld()) {
+        heightRange.mMin = -128;
+        heightRange.mMax = 512;
     }
-    OVERWORLD_HEIGHT_MODIFY(heightRange);  // 新增：应用Overworld修改
+    // 修改下界高度: 保持 0-256 (原版 0-128)
+    else if (dimId == VanillaDimensions::Nether()) {
+        heightRange.mMax = 256;
+    }
     return origin(level, dimId, heightRange, callbackContext, name);
 }
 
@@ -310,6 +310,7 @@ LL_TYPE_INSTANCE_HOOK(
     DIM_ID_MODIRY(DimensionType{this->mVanillaDimensionId});
     return origin(stream);
 }
+
 LL_TYPE_INSTANCE_HOOK(
     CacheHook,
     HookPriority::Normal,
@@ -320,6 +321,7 @@ LL_TYPE_INSTANCE_HOOK(
 ) {
     return;
 }
+
 LL_TYPE_INSTANCE_HOOK(
     LevelChunkPacketHook,
     HookPriority::Normal,
@@ -335,7 +337,7 @@ LL_TYPE_INSTANCE_HOOK(
 
 struct Impl {
     ll::memory::HookRegistrar<
-        ModifyNetherHeightHook,
+        ModifyDimensionHeightHook, // 使用修改后的维度高度钩子
         ClientGenerationHook,
         SubChunkRequestHandle,
         SubChunkPacketWrite,
