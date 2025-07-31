@@ -131,6 +131,13 @@ LL_TYPE_INSTANCE_HOOK(
         name = (decltype(name))VanillaDimensions::TheEnd();                                                            \
         __VA_ARGS__                                                                                                    \
     }
+
+// 新增宏：针对Overworld的高度修改（无ID伪装，因为Overworld已经是高限）
+#define OVERWORLD_HEIGHT_MODIFY(heightRange)                                                                           \
+    if (dimId == VanillaDimensions::Overworld()) {                                                                     \
+        heightRange.mMax = 512;  // 修改为512，可根据需要调整                                                                 \
+    }
+
 using namespace ll::literals;
 LL_TYPE_INSTANCE_HOOK(
     ModifyNetherHeightHook,
@@ -145,8 +152,9 @@ LL_TYPE_INSTANCE_HOOK(
     std::string          name
 ) {
     if (dimId == VanillaDimensions::Nether()) {
-        heightRange.mMax = 256;
+        heightRange.mMax = 256;  // 保留原Nether修改
     }
+    OVERWORLD_HEIGHT_MODIFY(heightRange);  // 新增：应用Overworld修改
     return origin(level, dimId, heightRange, callbackContext, name);
 }
 
